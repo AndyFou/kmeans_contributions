@@ -1,4 +1,5 @@
-import org.apache.log4j.{Level, Logger}
+import org.apache.spark.mllib.linalg.Vectors
+import org.apache.spark.mllib.linalg.Vector
 import org.apache.spark.{SparkConf, SparkContext}
 
 import scala.collection.mutable.ListBuffer
@@ -6,17 +7,9 @@ import scala.util.Random
 
 class KMeansInitialization {
 
-  def run(numClusters:Int): Unit ={
-    //hide logger from console
-    Logger.getLogger("org").setLevel(Level.OFF)
-    Logger.getLogger("akka").setLevel(Level.OFF)
-
-    //create sparkContext
-    val conf = new SparkConf().setAppName("HelloWorld as doulepsei")
-    val sc = new SparkContext(conf)
-
+  def run(sc:SparkContext,dataFile:String,numClusters:Int):Array[Vector]={
     //load and parse the data
-    val data = sc.textFile("smallData5clusters.txt")
+    val data = sc.textFile(dataFile)
     val parsedData = data.zipWithIndex().map{case (line,i) => i.toString + "\t" + line }.map(s => s.split('\t').map(_.toDouble)).cache()
 
     //find first center randomly
@@ -36,7 +29,13 @@ class KMeansInitialization {
       val tmp = parsedData.filter(x => x(0)==newcenter._1.toInt).cartesian(parsedData).map(c => (c._2(0),math.sqrt(math.pow((c._1(1)-c._2(1)),2)+math.pow((c._1(2)-c._2(2)),2))))
       distancesList = ListBuffer(distancesList(0).union(tmp))
     }
+    //print final centers
+    //centers.foreach(println)
+    var result=new ListBuffer[Vector]
+    //print
+    parsedData.filter(i=>centers.contains(i(0).toInt)).map(x=>(x(1),x(2))).collect().foreach(x=>println(x._1+"\t"+x._2))
+    parsedData.filter(i=>centers.contains(i(0).toInt)).map(x=>(x(1),x(2))).collect().foreach(x=> result += Vectors.dense(x._1,x._2))
 
-    centers.foreach(println)
+    return result.toArray
   }
 }
